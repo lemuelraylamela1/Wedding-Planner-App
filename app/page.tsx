@@ -1,239 +1,123 @@
-"use client";
-
-import { AppLayout } from "@/components/app-layout";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  Users,
-  Calendar,
-  DollarSign,
-  Users2,
-  Heart,
-  TrendingUp,
-} from "lucide-react";
+import { Header } from "@/components/header";
+import { CalendarCheck, Wallet, Users } from "lucide-react";
 import Link from "next/link";
-import {
-  initialWeddingDetails,
-  initialGuests,
-  initialBudget,
-  initialVendors,
-} from "@/lib/wedding-data";
 
-const StatCard = ({
-  icon: Icon,
-  label,
-  value,
-  subtext,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string | number;
-  subtext?: string;
-}) => (
-  <div className="wedding-card p-6">
-    <div className="flex items-start justify-between">
-      <div>
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="mt-2 text-3xl font-serif font-semibold text-foreground">
-          {value}
-        </p>
-        {subtext && (
-          <p className="mt-1 text-xs text-muted-foreground">{subtext}</p>
-        )}
-      </div>
-      <div className="rounded-lg bg-primary/10 p-3">
-        <Icon className="h-6 w-6 text-primary" />
-      </div>
-    </div>
-  </div>
-);
-
-export default function Dashboard() {
-  const wedding = initialWeddingDetails;
-  const guests = initialGuests;
-  const budgets = initialBudget;
-  const vendors = initialVendors;
-
-  const totalBudget = budgets.reduce((sum, b) => sum + b.budgeted, 0);
-  const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
-  const rsvpAccepted = guests.filter((g) => g.rsvpStatus === "accepted").length;
-  const rsvpPending = guests.filter((g) => g.rsvpStatus === "pending").length;
-  const vendorsBooked = vendors.filter((v) => v.status === "booked").length;
-
-  const daysUntilWedding = Math.floor(
-    (new Date(wedding.date).getTime() - new Date().getTime()) /
-      (1000 * 60 * 60 * 24),
-  );
-
+export default function Page() {
   return (
-    <AppLayout>
-      <div className="space-y-8">
-        {/* Header Section */}
-        <div className="space-y-2">
-          <h1 className="heading-elegant">
-            {wedding.brideName} & {wedding.groomName}&lsquo;s Wedding
+    <main className="min-h-screen bg-background text-foreground">
+      <Header />
+
+      {/* HERO */}
+      <section className="relative flex flex-col items-center justify-center text-center px-6 py-40 overflow-hidden">
+        {/* background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/10 to-transparent pointer-events-none" />
+
+        <div className="relative max-w-3xl">
+          <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6">
+            Plan Your <span className="text-primary">Perfect Wedding</span>
           </h1>
-          <p className="heading-sub">
-            {wedding.location} •{" "}
-            {new Date(wedding.date).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
+
+          <p className="text-lg text-muted-foreground mb-10">
+            Organize tasks, manage vendors, track your budget, and plan your
+            dream wedding — all in one beautiful place.
+          </p>
+
+          <div className="flex justify-center gap-4">
+            <button className="bg-primary text-primary-foreground px-7 py-3 rounded-lg font-medium shadow-md hover:shadow-lg hover:scale-105 transition">
+              Get Started
+            </button>
+
+            <button className="border border-border px-7 py-3 rounded-lg hover:bg-muted transition">
+              Learn More
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* FEATURES */}
+      <section className="px-6 py-24 bg-muted/30">
+        <div className="max-w-6xl mx-auto text-center mb-16">
+          <h2 className="text-3xl font-bold mb-4">
+            Everything You Need To Plan
+          </h2>
+          <p className="text-muted-foreground">
+            Our tools make wedding planning simple and stress-free.
           </p>
         </div>
 
-        {/* Countdown Section */}
-        <div className="rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Days Until Wedding
-              </p>
-              <p className="mt-1 text-4xl font-serif font-bold text-primary">
-                {daysUntilWedding}
-              </p>
+        <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-10">
+          {/* Feature 1 */}
+          <div className="p-8 rounded-xl border border-border bg-card shadow-sm hover:shadow-md hover:-translate-y-1 transition">
+            <div className="flex justify-center mb-4">
+              <CalendarCheck className="w-8 h-8 text-primary" />
             </div>
-            <Heart className="h-16 w-16 text-primary/20" />
+
+            <h3 className="text-xl font-semibold mb-3 text-center">
+              Task Planner
+            </h3>
+
+            <p className="text-muted-foreground text-center">
+              Stay organized with a complete checklist of everything needed for
+              your big day.
+            </p>
           </div>
-        </div>
 
-        {/* Stats Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            icon={Users}
-            label="Guests Invited"
-            value={guests.length}
-            subtext={`${rsvpAccepted} accepted, ${rsvpPending} pending`}
-          />
-          <StatCard
-            icon={Calendar}
-            label="Tasks Remaining"
-            value="12"
-            subtext="3 high priority"
-          />
-          <StatCard
-            icon={DollarSign}
-            label="Budget Status"
-            value={`${Math.round((totalSpent / totalBudget) * 100)}%`}
-            subtext={`$${totalSpent.toLocaleString()} of $${totalBudget.toLocaleString()}`}
-          />
-          <StatCard
-            icon={Users2}
-            label="Vendors"
-            value={vendorsBooked}
-            subtext={`${vendorsBooked} of ${vendors.length} booked`}
-          />
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="wedding-card p-6">
-            <h2 className="text-lg font-serif font-semibold text-foreground mb-4">
-              Quick Actions
-            </h2>
-            <div className="space-y-2">
-              <Link href="/guests">
-                <Button variant="outline" className="w-full justify-start">
-                  <Users className="mr-2 h-4 w-4" />
-                  Manage Guests
-                </Button>
-              </Link>
-              <Link href="/timeline">
-                <Button variant="outline" className="w-full justify-start">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  View Timeline
-                </Button>
-              </Link>
-              <Link href="/budget">
-                <Button variant="outline" className="w-full justify-start">
-                  <DollarSign className="mr-2 h-4 w-4" />
-                  Manage Budget
-                </Button>
-              </Link>
+          {/* Feature 2 */}
+          <div className="p-8 rounded-xl border border-border bg-card shadow-sm hover:shadow-md hover:-translate-y-1 transition">
+            <div className="flex justify-center mb-4">
+              <Wallet className="w-8 h-8 text-primary" />
             </div>
+
+            <h3 className="text-xl font-semibold mb-3 text-center">
+              Budget Tracker
+            </h3>
+
+            <p className="text-muted-foreground text-center">
+              Keep your wedding finances under control and track every expense
+              easily.
+            </p>
           </div>
 
-          {/* Theme Info */}
-          <div className="wedding-card p-6">
-            <h2 className="text-lg font-serif font-semibold text-foreground mb-4">
-              Wedding Theme
-            </h2>
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs text-muted-foreground">Theme</p>
-                <p className="mt-1 font-medium text-foreground">
-                  {wedding.theme}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Expected Guests</p>
-                <p className="mt-1 font-medium text-foreground">
-                  {wedding.guestCount} guests
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total Budget</p>
-                <p className="mt-1 font-medium text-primary">
-                  ${wedding.budget.toLocaleString()}
-                </p>
-              </div>
+          {/* Feature 3 */}
+          <div className="p-8 rounded-xl border border-border bg-card shadow-sm hover:shadow-md hover:-translate-y-1 transition">
+            <div className="flex justify-center mb-4">
+              <Users className="w-8 h-8 text-primary" />
             </div>
-          </div>
-        </div>
 
-        {/* Recent Tasks Preview */}
-        <div className="wedding-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-serif font-semibold text-foreground">
-              Recent Tasks
-            </h2>
-            <Link href="/timeline">
-              <Button variant="ghost" size="sm">
-                View All
-              </Button>
-            </Link>
-          </div>
-          <div className="space-y-3">
-            {[
-              {
-                title: "Send Save the Dates",
-                status: "in-progress",
-                priority: "high",
-              },
-              {
-                title: "Book Photographer",
-                status: "pending",
-                priority: "medium",
-              },
-              { title: "Finalize Menu", status: "pending", priority: "high" },
-            ].map((task, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-3 pb-3 border-b border-border/50 last:border-0">
-                <div
-                  className={`h-3 w-3 rounded-full ${
-                    task.priority === "high" ? "bg-destructive" : "bg-accent"
-                  }`}
-                />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {task.title}
-                  </p>
-                </div>
-                <span
-                  className={`text-xs font-medium px-2 py-1 rounded-full ${
-                    task.status === "in-progress"
-                      ? "bg-primary/10 text-primary"
-                      : "bg-muted/50 text-muted-foreground"
-                  }`}>
-                  {task.status === "in-progress" ? "In Progress" : "Pending"}
-                </span>
-              </div>
-            ))}
+            <h3 className="text-xl font-semibold mb-3 text-center">
+              Vendor Manager
+            </h3>
+
+            <p className="text-muted-foreground text-center">
+              Manage photographers, caterers, and venues all in one beautiful
+              dashboard.
+            </p>
           </div>
         </div>
-      </div>
-    </AppLayout>
+      </section>
+
+      {/* CTA */}
+      <section className="px-6 py-32 text-center">
+        <div className="max-w-2xl mx-auto">
+          <h2 className="text-3xl font-bold mb-6">
+            Start Planning Your Dream Wedding Today
+          </h2>
+
+          <p className="text-muted-foreground mb-10">
+            Join couples who are organizing their wedding stress-free with our
+            simple planning tools.
+          </p>
+
+          <button className="bg-primary text-primary-foreground px-10 py-4 rounded-lg font-medium shadow-md hover:shadow-lg hover:scale-105 transition">
+            <Link href="/auth/signup">Create Free Account</Link>
+          </button>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
+        © {new Date().getFullYear()} Wedding Planner App
+      </footer>
+    </main>
   );
 }
