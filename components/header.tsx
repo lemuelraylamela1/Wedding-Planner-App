@@ -5,6 +5,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -39,14 +47,23 @@ export function Header() {
             </>
           )}
           {session && (
-            <>
-              <span className="text-sm font-medium">{session.user?.name}</span>
-              <Button
-                variant="destructive"
-                onClick={() => signOut({ callbackUrl: "/" })}>
-                Sign Out
-              </Button>
-            </>
+            <div className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/40 px-4 py-3">
+              {/* User info */}
+
+              {/* Avatar Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition">
+                    {session.user?.email?.charAt(0).toUpperCase()}
+                  </button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>{session.user?.email}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           )}
         </div>
 

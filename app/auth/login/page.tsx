@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Heart } from "lucide-react";
 import { Header } from "@/components/header";
 import { signIn } from "next-auth/react";
+import { useSession } from "next-auth/react";
 
 export default function LogIn() {
+  const { status } = useSession();
   const router = useRouter();
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/dashboard");
+    }
+  }, [status, router]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({

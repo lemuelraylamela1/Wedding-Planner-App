@@ -1,8 +1,17 @@
 import { Header } from "@/components/header";
 import { CalendarCheck, Wallet, Users } from "lucide-react";
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { redirect } from "next/navigation";
 
-export default function Page() {
+export default async function Page() {
+  const session = await getServerSession(authOptions);
+
+  // If logged in, redirect to dashboard
+  if (session) {
+    redirect("/dashboard");
+  }
   return (
     <main className="min-h-screen bg-background text-foreground">
       <Header />

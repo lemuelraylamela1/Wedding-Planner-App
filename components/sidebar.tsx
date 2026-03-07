@@ -10,12 +10,14 @@ import {
   Armchair,
   Settings,
   Heart,
+  LogOut,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/guests", label: "Guests", icon: Users },
   { href: "/wedding-details", label: "Wedding Details", icon: Heart },
   { href: "/timeline", label: "Timeline", icon: Calendar },
@@ -69,7 +71,14 @@ export function Sidebar() {
       </nav>
 
       {/* Footer section */}
-      <div className="border-t border-border/50 p-4">
+      <div className="border-t border-border/50 p-4 space-y-3">
+        <button
+          onClick={() => signOut({ callbackUrl: "/" })}
+          className="w-full flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition">
+          <LogOut className="h-4 w-4" />
+          Sign Out
+        </button>
+
         <p className="text-xs text-muted-foreground text-center">
           Your Perfect Day Awaits ✦
         </p>
