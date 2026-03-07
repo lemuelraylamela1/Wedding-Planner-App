@@ -12,9 +12,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Bell, Lock, User, Download, Trash2, Save } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+
+interface Settings {
+  id: string;
+  groomsName: string;
+  bridesName: string;
+  weddingDate: Date;
+  weddingVenue: string;
+}
 
 export default function SettingsPage() {
+  const { data: session } = useSession();
+  const [settings, setSettings] = useState<Settings>();
+
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
 
@@ -41,20 +53,17 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-foreground">
-                Full Name
+                Groom&apos;s Name
               </label>
-              <Input defaultValue="Sarah & Michael" className="mt-2" />
+              <Input placeholder="Groom" className="mt-2" />
             </div>
             <div>
               <label className="text-sm font-medium text-foreground">
-                Email Address
+                Bride&apos;s Name
               </label>
-              <Input
-                type="email"
-                defaultValue="sarah@example.com"
-                className="mt-2"
-              />
+              <Input placeholder="Bride" className="mt-2" />
             </div>
+
             <div>
               <label className="text-sm font-medium text-foreground">
                 Wedding Date

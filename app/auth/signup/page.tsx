@@ -78,8 +78,6 @@ export default function RegisterPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          groomsName: formData.groomsName,
-          bridesName: formData.bridesName,
           email: formData.email,
           password: formData.password,
           confirmPassword: formData.confirmPassword,
@@ -124,37 +122,6 @@ export default function RegisterPage() {
                 {error}
               </div>
             )}
-
-            <div>
-              <label
-                htmlFor="groomsName"
-                className="block text-sm font-medium text-foreground mb-2">
-                Groom&apos;s Name
-              </label>
-              <Input
-                id="groomsName"
-                name="groomsName"
-                placeholder="e.g., Lemuel"
-                value={formData.groomsName}
-                onChange={handleChange}
-                className="w-full"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="bridesName"
-                className="block text-sm font-medium text-foreground mb-2">
-                Bride&apos;s Name
-              </label>
-              <Input
-                id="bridesName"
-                name="bridesName"
-                placeholder="e.g., Grazielle"
-                value={formData.bridesName}
-                onChange={handleChange}
-                className="w-full"
-              />
-            </div>
 
             <div>
               <label

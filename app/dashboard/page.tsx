@@ -18,6 +18,7 @@ import {
   initialBudget,
   initialVendors,
 } from "@/lib/wedding-data";
+import { useSession } from "next-auth/react";
 
 const StatCard = ({
   icon: Icon,

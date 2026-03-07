@@ -12,32 +12,21 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
-
       async authorize(credentials) {
         if (!credentials) return null;
 
         const { email, password } = credentials;
+        await connectMongoDB();
+        const user = await User.findOne({ email });
+        if (!user) return null;
 
-        try {
-          await connectMongoDB();
+        const passwordsMatch = await bcrypt.compare(password, user.password);
+        if (!passwordsMatch) return null;
 
-          const user = await User.findOne({ email });
-
-          if (!user) return null;
-
-          const passwordsMatch = await bcrypt.compare(password, user.password);
-
-          if (!passwordsMatch) return null;
-
-          return {
-            id: user._id.toString(),
-            name: user.name,
-            email: user.email,
-          };
-        } catch (error) {
-          console.error(error);
-          return null;
-        }
+        return {
+          id: user._id.toString(),
+          email: user.email,
+        };
       },
     }),
   ],
@@ -46,8 +35,25 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
 
-  secret: process.env.NEXTAUTH_SECRET,
+  callbacks: {
+    // Store user.id in JWT token
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id; // <-- store user id in JWT
+      }
+      return token;
+    },
 
+    // Make user.id available in session on client
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string; // <-- attach id
+      }
+      return session;
+    },
+  },
+
+  secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: "/signin",
   },

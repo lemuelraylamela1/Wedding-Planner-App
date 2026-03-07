@@ -6,11 +6,61 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar, MapPin, Heart, Users, Edit2 } from "lucide-react";
 import { initialWeddingDetails } from "@/lib/wedding-data";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+
+interface Wedding {
+  brideName: string;
+  groomName: string;
+  date: string;
+  location: string;
+  theme: string;
+  guestCount: number;
+  budget: number;
+}
 
 export default function WeddingDetailsPage() {
-  const [wedding, setWedding] = useState(initialWeddingDetails);
+  const [wedding, setWedding] = useState<Wedding>({
+    brideName: "",
+    groomName: "",
+    date: "",
+    location: "",
+    theme: "",
+    guestCount: 0,
+    budget: 0,
+  });
   const [isEditing, setIsEditing] = useState(false);
+
+  const { data: session } = useSession();
+
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    const fetchWedding = async () => {
+      const res = await fetch(`/api/wedding/${session.user.id}`);
+      const data = await res.json();
+
+      if (data) {
+        setWedding(data);
+      }
+    };
+
+    fetchWedding();
+  }, [session]);
+
+  const handleSave = async () => {
+    if (!session?.user?.id) return;
+
+    await fetch(`/api/wedding/${session.user.id}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(wedding),
+    });
+
+    setIsEditing(false);
+  };
 
   return (
     <AppLayout>
@@ -23,8 +73,15 @@ export default function WeddingDetailsPage() {
               Core information about your special day
             </p>
           </div>
-          <Button variant="outline" onClick={() => setIsEditing(!isEditing)}>
-            <Edit2 className="mr-2 h-4 w-4" />
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (isEditing) {
+                handleSave();
+              } else {
+                setIsEditing(true);
+              }
+            }}>
             {isEditing ? "Save" : "Edit"}
           </Button>
         </div>
@@ -38,21 +95,37 @@ export default function WeddingDetailsPage() {
                 Couple
               </h2>
               <div className="space-y-4">
-                <div>
-                  <label className="text-sm text-muted-foreground">
-                    Bride Name
-                  </label>
+                <label className="text-sm text-muted-foreground">
+                  Bride&apos;s Name
+                </label>
+                {isEditing ? (
+                  <Input
+                    value={wedding.brideName}
+                    onChange={(e) =>
+                      setWedding({ ...wedding, brideName: e.target.value })
+                    }
+                  />
+                ) : (
                   <p className="mt-1 text-xl font-medium text-foreground">
                     {wedding.brideName}
                   </p>
-                </div>
+                )}
                 <div>
                   <label className="text-sm text-muted-foreground">
-                    Groom Name
+                    Groom&apos;s Name
                   </label>
-                  <p className="mt-1 text-xl font-medium text-foreground">
-                    {wedding.groomName}
-                  </p>
+                  {isEditing ? (
+                    <Input
+                      value={wedding.groomName}
+                      onChange={(e) =>
+                        setWedding({ ...wedding, groomName: e.target.value })
+                      }
+                    />
+                  ) : (
+                    <p className="mt-1 text-xl font-medium text-foreground">
+                      {wedding.groomName}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -65,27 +138,51 @@ export default function WeddingDetailsPage() {
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
                   <Calendar className="h-5 w-5 text-primary mt-1" />
+
                   <div>
                     <p className="text-sm text-muted-foreground">
                       Wedding Date
                     </p>
-                    <p className="mt-1 text-lg font-medium text-foreground">
-                      {new Date(wedding.date).toLocaleDateString("en-US", {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </p>
+
+                    {isEditing ? (
+                      <Input
+                        type="date"
+                        className="mt-1"
+                        value={wedding.date}
+                        onChange={(e) =>
+                          setWedding({ ...wedding, date: e.target.value })
+                        }
+                      />
+                    ) : (
+                      <p className="mt-1 text-lg font-medium text-foreground">
+                        {wedding.date
+                          ? new Date(wedding.date).toLocaleDateString("en-PH", {
+                              weekday: "long",
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })
+                          : "Not set"}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <MapPin className="h-5 w-5 text-primary mt-1" />
                   <div>
                     <p className="text-sm text-muted-foreground">Venue</p>
-                    <p className="mt-1 text-lg font-medium text-foreground">
-                      {wedding.location}
-                    </p>
+                    {isEditing ? (
+                      <Input
+                        value={wedding.location}
+                        onChange={(e) =>
+                          setWedding({ ...wedding, location: e.target.value })
+                        }
+                      />
+                    ) : (
+                      <p className="mt-1 text-xl font-medium text-foreground">
+                        {wedding.location}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -97,9 +194,18 @@ export default function WeddingDetailsPage() {
               {/* Theme */}
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Theme</p>
-                <p className="text-lg font-medium text-foreground">
-                  {wedding.theme}
-                </p>
+                {isEditing ? (
+                  <Input
+                    value={wedding.theme}
+                    onChange={(e) =>
+                      setWedding({ ...wedding, theme: e.target.value })
+                    }
+                  />
+                ) : (
+                  <p className="mt-1 text-xl font-medium text-foreground">
+                    {wedding.theme}
+                  </p>
+                )}
               </div>
 
               {/* Expected Guests */}
@@ -110,9 +216,25 @@ export default function WeddingDetailsPage() {
                     Expected Guests
                   </p>
                 </div>
-                <p className="text-lg font-medium text-foreground">
-                  {wedding.guestCount}
-                </p>
+
+                {isEditing ? (
+                  <Input
+                    type="number"
+                    min={0}
+                    className="mt-1"
+                    value={wedding.guestCount}
+                    onChange={(e) =>
+                      setWedding({
+                        ...wedding,
+                        guestCount: Number(e.target.value),
+                      })
+                    }
+                  />
+                ) : (
+                  <p className="text-lg font-medium text-foreground">
+                    {wedding.guestCount}
+                  </p>
+                )}
               </div>
 
               {/* Budget */}
@@ -121,9 +243,24 @@ export default function WeddingDetailsPage() {
                   <Heart className="h-4 w-4 text-primary" />
                   <p className="text-sm text-muted-foreground">Total Budget</p>
                 </div>
-                <p className="text-lg font-medium text-primary">
-                  ${wedding.budget.toLocaleString()}
-                </p>
+                {isEditing ? (
+                  <Input
+                    type="number"
+                    min={0}
+                    className="mt-1"
+                    value={wedding.budget}
+                    onChange={(e) =>
+                      setWedding({
+                        ...wedding,
+                        budget: Number(e.target.value),
+                      })
+                    }
+                  />
+                ) : (
+                  <p className="text-lg font-medium text-foreground">
+                    ₱{wedding.budget}
+                  </p>
+                )}
               </div>
             </div>
           </div>

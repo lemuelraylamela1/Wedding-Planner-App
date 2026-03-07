@@ -2,14 +2,6 @@ import mongoose, { Schema, models } from "mongoose";
 
 const userSchema = new Schema(
   {
-    groomsName: {
-      type: String,
-      required: true,
-    },
-    bridesName: {
-      type: String,
-      required: true,
-    },
     email: {
       type: String,
       required: true,
