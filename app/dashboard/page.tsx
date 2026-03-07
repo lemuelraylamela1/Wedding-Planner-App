@@ -19,6 +19,8 @@ import {
   initialVendors,
 } from "@/lib/wedding-data";
 import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
+import { Wedding } from "../wedding-details/page";
 
 const StatCard = ({
   icon: Icon,
@@ -50,10 +52,38 @@ const StatCard = ({
 );
 
 export default function Dashboard() {
-  const wedding = initialWeddingDetails;
+  const [wedding, setWedding] = useState<Wedding>({
+    brideName: "",
+    groomName: "",
+    date: "",
+    location: "",
+    theme: "",
+    guestCount: 0,
+    budget: 0,
+    ceremonyTime: "",
+    receptionTime: "",
+    guestArrival: "",
+  });
   const guests = initialGuests;
   const budgets = initialBudget;
   const vendors = initialVendors;
+
+  const { data: session } = useSession();
+
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    const fetchWedding = async () => {
+      const res = await fetch(`/api/wedding/${session.user.id}`);
+      const data = await res.json();
+
+      if (data) {
+        setWedding(data);
+      }
+    };
+
+    fetchWedding();
+  }, [session]);
 
   const totalBudget = budgets.reduce((sum, b) => sum + b.budgeted, 0);
   const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
@@ -61,9 +91,14 @@ export default function Dashboard() {
   const rsvpPending = guests.filter((g) => g.rsvpStatus === "pending").length;
   const vendorsBooked = vendors.filter((v) => v.status === "booked").length;
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const weddingDay = new Date(wedding.date);
+  weddingDay.setHours(0, 0, 0, 0);
+
   const daysUntilWedding = Math.floor(
-    (new Date(wedding.date).getTime() - new Date().getTime()) /
-      (1000 * 60 * 60 * 24),
+    (weddingDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
   );
 
   return (
@@ -76,7 +111,7 @@ export default function Dashboard() {
           </h1>
           <p className="heading-sub">
             {wedding.location} •{" "}
-            {new Date(wedding.date).toLocaleDateString("en-US", {
+            {new Date(wedding.date).toLocaleDateString("en-PH", {
               year: "numeric",
               month: "long",
               day: "numeric",
@@ -176,7 +211,7 @@ export default function Dashboard() {
               <div>
                 <p className="text-xs text-muted-foreground">Total Budget</p>
                 <p className="mt-1 font-medium text-primary">
-                  ${wedding.budget.toLocaleString()}
+                  ₱{wedding.budget.toLocaleString()}
                 </p>
               </div>
             </div>

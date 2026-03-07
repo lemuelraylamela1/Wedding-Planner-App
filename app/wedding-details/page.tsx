@@ -5,11 +5,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar, MapPin, Heart, Users, Edit2 } from "lucide-react";
-import { initialWeddingDetails } from "@/lib/wedding-data";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 
-interface Wedding {
+export interface Wedding {
   brideName: string;
   groomName: string;
   date: string;
