@@ -17,6 +17,9 @@ interface Wedding {
   theme: string;
   guestCount: number;
   budget: number;
+  ceremonyTime: string;
+  receptionTime: string;
+  guestArrival: string;
 }
 
 export default function WeddingDetailsPage() {
@@ -28,6 +31,9 @@ export default function WeddingDetailsPage() {
     theme: "",
     guestCount: 0,
     budget: 0,
+    ceremonyTime: "",
+    receptionTime: "",
+    guestArrival: "",
   });
   const [isEditing, setIsEditing] = useState(false);
 
@@ -87,31 +93,36 @@ export default function WeddingDetailsPage() {
         </div>
 
         {/* Main Details Card */}
-        <div className="wedding-card p-8">
-          <div className="grid gap-8 md:grid-cols-2">
+        <div className="wedding-card p-8 shadow-lg rounded-2xl bg-white dark:bg-gray-800 transition-colors">
+          <div className="grid gap-10 md:grid-cols-2">
             {/* Bride & Groom */}
-            <div className="space-y-4">
-              <h2 className="text-lg font-serif font-semibold text-foreground">
+            <div className="space-y-6">
+              <h2 className="text-xl font-serif font-bold text-foreground border-b border-border pb-2">
                 Couple
               </h2>
+
               <div className="space-y-4">
-                <label className="text-sm text-muted-foreground">
-                  Bride&apos;s Name
-                </label>
-                {isEditing ? (
-                  <Input
-                    value={wedding.brideName}
-                    onChange={(e) =>
-                      setWedding({ ...wedding, brideName: e.target.value })
-                    }
-                  />
-                ) : (
-                  <p className="mt-1 text-xl font-medium text-foreground">
-                    {wedding.brideName}
-                  </p>
-                )}
                 <div>
-                  <label className="text-sm text-muted-foreground">
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Bride&apos;s Name
+                  </label>
+                  {isEditing ? (
+                    <Input
+                      value={wedding.brideName}
+                      onChange={(e) =>
+                        setWedding({ ...wedding, brideName: e.target.value })
+                      }
+                      className="mt-1 bg-gray-50 dark:bg-gray-700"
+                    />
+                  ) : (
+                    <p className="mt-1 text-xl font-semibold text-foreground">
+                      {wedding.brideName}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">
                     Groom&apos;s Name
                   </label>
                   {isEditing ? (
@@ -120,9 +131,10 @@ export default function WeddingDetailsPage() {
                       onChange={(e) =>
                         setWedding({ ...wedding, groomName: e.target.value })
                       }
+                      className="mt-1 bg-gray-50 dark:bg-gray-700"
                     />
                   ) : (
-                    <p className="mt-1 text-xl font-medium text-foreground">
+                    <p className="mt-1 text-xl font-semibold text-foreground">
                       {wedding.groomName}
                     </p>
                   )}
@@ -131,30 +143,29 @@ export default function WeddingDetailsPage() {
             </div>
 
             {/* Wedding Date & Location */}
-            <div className="space-y-4">
-              <h2 className="text-lg font-serif font-semibold text-foreground">
+            <div className="space-y-6">
+              <h2 className="text-xl font-serif font-bold text-foreground border-b border-border pb-2">
                 Date & Location
               </h2>
+
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 text-primary mt-1" />
-
+                  <Calendar className="h-6 w-6 text-primary mt-1" />
                   <div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm font-medium text-muted-foreground">
                       Wedding Date
                     </p>
-
                     {isEditing ? (
                       <Input
                         type="date"
-                        className="mt-1"
+                        className="mt-1 bg-gray-50 dark:bg-gray-700"
                         value={wedding.date}
                         onChange={(e) =>
                           setWedding({ ...wedding, date: e.target.value })
                         }
                       />
                     ) : (
-                      <p className="mt-1 text-lg font-medium text-foreground">
+                      <p className="mt-1 text-lg font-semibold text-foreground">
                         {wedding.date
                           ? new Date(wedding.date).toLocaleDateString("en-PH", {
                               weekday: "long",
@@ -167,19 +178,23 @@ export default function WeddingDetailsPage() {
                     )}
                   </div>
                 </div>
+
                 <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-primary mt-1" />
+                  <MapPin className="h-6 w-6 text-primary mt-1" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Venue</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Venue
+                    </p>
                     {isEditing ? (
                       <Input
                         value={wedding.location}
                         onChange={(e) =>
                           setWedding({ ...wedding, location: e.target.value })
                         }
+                        className="mt-1 bg-gray-50 dark:bg-gray-700"
                       />
                     ) : (
-                      <p className="mt-1 text-xl font-medium text-foreground">
+                      <p className="mt-1 text-lg font-semibold text-foreground">
                         {wedding.location}
                       </p>
                     )}
@@ -189,80 +204,162 @@ export default function WeddingDetailsPage() {
             </div>
           </div>
 
-          <div className="mt-8 border-t border-border/50 pt-8">
-            <div className="grid gap-8 md:grid-cols-3">
-              {/* Theme */}
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Theme</p>
-                {isEditing ? (
-                  <Input
-                    value={wedding.theme}
-                    onChange={(e) =>
-                      setWedding({ ...wedding, theme: e.target.value })
-                    }
-                  />
-                ) : (
-                  <p className="mt-1 text-xl font-medium text-foreground">
-                    {wedding.theme}
-                  </p>
-                )}
-              </div>
-
-              {/* Expected Guests */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-primary" />
-                  <p className="text-sm text-muted-foreground">
-                    Expected Guests
-                  </p>
-                </div>
-
-                {isEditing ? (
-                  <Input
-                    type="number"
-                    min={0}
-                    className="mt-1"
-                    value={wedding.guestCount}
-                    onChange={(e) =>
-                      setWedding({
-                        ...wedding,
-                        guestCount: Number(e.target.value),
-                      })
-                    }
-                  />
-                ) : (
-                  <p className="text-lg font-medium text-foreground">
-                    {wedding.guestCount}
-                  </p>
-                )}
-              </div>
-
-              {/* Budget */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Heart className="h-4 w-4 text-primary" />
-                  <p className="text-sm text-muted-foreground">Total Budget</p>
-                </div>
-                {isEditing ? (
-                  <Input
-                    type="number"
-                    min={0}
-                    className="mt-1"
-                    value={wedding.budget}
-                    onChange={(e) =>
-                      setWedding({
-                        ...wedding,
-                        budget: Number(e.target.value),
-                      })
-                    }
-                  />
-                ) : (
-                  <p className="text-lg font-medium text-foreground">
-                    ₱{wedding.budget}
-                  </p>
-                )}
-              </div>
+          {/* Stats: Theme, Guests, Budget */}
+          <div className="mt-10 border-t border-border/50 pt-6 grid gap-6 md:grid-cols-3">
+            {/* Theme */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Theme</p>
+              {isEditing ? (
+                <Input
+                  value={wedding.theme}
+                  onChange={(e) =>
+                    setWedding({ ...wedding, theme: e.target.value })
+                  }
+                  className="bg-gray-50 dark:bg-gray-700"
+                />
+              ) : (
+                <p className="text-lg font-semibold text-foreground">
+                  {wedding.theme}
+                </p>
+              )}
             </div>
+
+            {/* Expected Guests */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <p className="text-sm font-medium text-muted-foreground">
+                  Expected Guests
+                </p>
+              </div>
+              {isEditing ? (
+                <Input
+                  type="number"
+                  min={0}
+                  className="mt-1 bg-gray-50 dark:bg-gray-700"
+                  value={wedding.guestCount}
+                  onChange={(e) =>
+                    setWedding({
+                      ...wedding,
+                      guestCount: Number(e.target.value),
+                    })
+                  }
+                />
+              ) : (
+                <p className="text-lg font-semibold text-foreground">
+                  {wedding.guestCount}
+                </p>
+              )}
+            </div>
+
+            {/* Budget */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Heart className="h-5 w-5 text-primary" />
+                <p className="text-sm font-medium text-muted-foreground">
+                  Total Budget
+                </p>
+              </div>
+              {isEditing ? (
+                <Input
+                  type="number"
+                  min={0}
+                  className="mt-1 bg-gray-50 dark:bg-gray-700"
+                  value={wedding.budget}
+                  onChange={(e) =>
+                    setWedding({ ...wedding, budget: Number(e.target.value) })
+                  }
+                />
+              ) : (
+                <p className="text-lg font-semibold text-primary">
+                  ₱{wedding.budget.toLocaleString()}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid gap-4 md:grid-cols-3">
+          {/* Ceremony Time */}
+          <div className="wedding-card p-4 text-center">
+            <p className="text-xs text-muted-foreground">Ceremony Time</p>
+            {isEditing ? (
+              <Input
+                type="time"
+                value={wedding.ceremonyTime || ""}
+                onChange={(e) =>
+                  setWedding({ ...wedding, ceremonyTime: e.target.value })
+                }
+                className="mt-2 font-serif text-lg font-semibold text-foreground"
+              />
+            ) : (
+              <p className="mt-2 font-serif text-lg font-semibold text-foreground">
+                {wedding.ceremonyTime
+                  ? new Date(
+                      `1970-01-01T${wedding.ceremonyTime}:00`,
+                    ).toLocaleTimeString("en-PH", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })
+                  : "--:--"}
+              </p>
+            )}
+          </div>
+
+          {/* Reception Time */}
+          <div className="wedding-card p-4 text-center">
+            <p className="text-xs text-muted-foreground">Reception Time</p>
+            {isEditing ? (
+              <Input
+                type="time"
+                value={wedding.receptionTime || ""}
+                onChange={(e) =>
+                  setWedding({ ...wedding, receptionTime: e.target.value })
+                }
+                className="mt-2 font-serif text-lg font-semibold text-foreground"
+              />
+            ) : (
+              <p className="mt-2 font-serif text-lg font-semibold text-foreground">
+                {wedding.receptionTime
+                  ? new Date(
+                      `1970-01-01T${wedding.receptionTime}:00`,
+                    ).toLocaleTimeString("en-PH", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })
+                  : "--:--"}
+              </p>
+            )}
+          </div>
+
+          {/* Guest Arrival */}
+          <div className="wedding-card p-4 text-center">
+            <p className="text-xs text-muted-foreground">Guest Arrival</p>
+            {isEditing ? (
+              <Input
+                type="time"
+                value={wedding.guestArrival || ""}
+                onChange={(e) =>
+                  setWedding({ ...wedding, guestArrival: e.target.value })
+                }
+                className="mt-2 font-serif text-lg font-semibold text-foreground"
+              />
+            ) : (
+              <p className="mt-2 font-serif text-lg font-semibold text-foreground">
+                {wedding.guestArrival
+                  ? new Date(
+                      `1970-01-01T${wedding.guestArrival}:00`,
+                    ).toLocaleTimeString("en-PH", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })
+                  : "--:--"}
+              </p>
+            )}
           </div>
         </div>
 
@@ -333,23 +430,6 @@ export default function WeddingDetailsPage() {
               </p>
             </div>
           </div>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="grid gap-4 md:grid-cols-4">
-          {[
-            { label: "Ceremony Time", value: "4:00 PM" },
-            { label: "Reception Time", value: "5:30 PM" },
-            { label: "Guest Arrival", value: "3:30 PM" },
-            { label: "Last Dance", value: "11:00 PM" },
-          ].map((item, idx) => (
-            <div key={idx} className="wedding-card p-4 text-center">
-              <p className="text-xs text-muted-foreground">{item.label}</p>
-              <p className="mt-2 font-serif text-lg font-semibold text-foreground">
-                {item.value}
-              </p>
-            </div>
-          ))}
         </div>
       </div>
     </AppLayout>

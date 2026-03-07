@@ -4,8 +4,9 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   req: Request,
-  { params }: { params: { userId: string } },
+  props: { params: Promise<{ userId: string }> },
 ) {
+  const params = await props.params;
   try {
     await connectMongoDB();
 
@@ -22,8 +23,9 @@ export async function GET(
 
 export async function POST(
   req: Request,
-  { params }: { params: { userId: string } },
+  props: { params: Promise<{ userId: string }> },
 ) {
+  const params = await props.params;
   try {
     await connectMongoDB();
 
@@ -39,6 +41,9 @@ export async function POST(
         theme: body.theme,
         guestCount: body.guestCount,
         budget: body.budget,
+        ceremonyTime: body.ceremonyTime,
+        receptionTime: body.receptionTime,
+        guestArrival: body.guestArrival,
       },
       { new: true, upsert: true },
     );
