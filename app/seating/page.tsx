@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Users, Trash2, Edit2, Download } from "lucide-react";
 import { Guests } from "@/app/guests/page";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogTrigger,
@@ -15,6 +16,21 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+
+interface Guest {
+  _id: string;
+  guestName: string;
+  table?: number | ""; // matches your DB
+  meal?: string;
+  rsvpStatus?: "accepted" | "declined" | "pending" | "maybe" | "";
+}
+
+interface TableFromDB {
+  _id: string;
+  number: number;
+  capacity: number;
+  guests: string[];
+}
 
 interface Table {
   id: string;
@@ -35,40 +51,34 @@ export default function SeatingPage() {
   const [rsvpFilter, setRsvpFilter] = useState<string>("all");
 
   useEffect(() => {
-    const fetchGuests = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch("/api/guests");
-        if (!res.ok) throw new Error("Failed to fetch guests");
-        const data: Guests[] = await res.json();
-        setGuests(data);
+        const [guestRes, tableRes] = await Promise.all([
+          fetch("/api/guests"),
+          fetch("/api/tables"),
+        ]);
 
-        // Generate tables automatically
-        const tableMap: Record<number, Table> = {};
-        data.forEach((guest) => {
-          if (guest.table) {
-            if (!tableMap[guest.table]) {
-              tableMap[guest.table] = {
-                id: String(guest.table),
-                number: guest.table,
-                capacity: 8, // default capacity
-                guests: [],
-              };
-            }
-            tableMap[guest.table].guests.push(guest._id);
-          }
-        });
+        const guestData = await guestRes.json();
+        const tableData = await tableRes.json();
 
-        // Sort tables by table number
-        const sortedTables = Object.values(tableMap).sort(
-          (a, b) => a.number - b.number,
-        );
-        setTables(sortedTables);
+        setGuests(guestData);
+
+        const mappedTables = tableData.map((table: TableFromDB) => ({
+          id: table._id, // ✅ map here
+          number: table.number,
+          capacity: table.capacity,
+          guests: guestData
+            .filter((g: Guest) => g.table === table.number)
+            .map((g: Guest) => g._id),
+        }));
+
+        setTables(mappedTables);
       } catch (error) {
         console.error(error);
       }
     };
 
-    fetchGuests();
+    fetchData();
   }, []);
 
   const seatedGuests = new Set(tables.flatMap((t) => t.guests));
@@ -98,7 +108,11 @@ export default function SeatingPage() {
     tables: tables.length,
     occupancy:
       tables.length > 0
-        ? Math.round((seatedGuests.size / (tables.length * 8)) * 100)
+        ? Math.round(
+            (seatedGuests.size /
+              tables.reduce((sum, t) => sum + t.capacity, 0)) *
+              100,
+          )
         : 0,
   };
 
@@ -114,7 +128,7 @@ export default function SeatingPage() {
   // const filteredUnseatedGuests = unseatedGuests.filter((guest) =>
   //   guest.name.toLowerCase().includes(searchTerm.toLowerCase()),
   // );
-  const handleAddTable = (
+  const handleAddTable = async (
     tableNumber: string | number,
     capacity: string | number,
   ) => {
@@ -132,25 +146,43 @@ export default function SeatingPage() {
       return;
     }
 
-    const newTables = [
-      ...tables,
-      {
-        id: String(Date.now()),
-        number,
-        capacity: cap,
-        guests: [],
-      },
-    ];
+    const newTable = {
+      id: String(Date.now()), // optional, backend can generate id
+      number,
+      capacity: cap,
+      guests: [],
+    };
 
-    // Auto sort by table number
-    newTables.sort((a, b) => a.number - b.number);
+    // 1️⃣ Add to local state
+    setTables((prev) =>
+      [...prev, newTable].sort((a, b) => a.number - b.number),
+    );
 
-    setTables(newTables);
+    // 2️⃣ Send to backend to persist
+    try {
+      const res = await fetch("/api/tables", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ number, capacity: cap }),
+      });
+
+      if (!res.ok) throw new Error("Failed to create table on server");
+      toast.success("Table added!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save table. Try again.");
+    }
   };
 
   const handleMoveGuest = async (guestId: string, targetTableId: string) => {
     const targetTable = tables.find((t) => t.id === targetTableId);
     if (!targetTable) return;
+
+    // ✅ Prevent adding if table is full
+    if (targetTable.guests.length >= targetTable.capacity) {
+      alert(`Table ${targetTable.number} is already at full capacity!`);
+      return;
+    }
 
     // 1️⃣ Update local state
     setTables((prevTables) =>
@@ -172,11 +204,11 @@ export default function SeatingPage() {
       const res = await fetch(`/api/guests/${guestId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ table: targetTable.number }), // store the table number
+        body: JSON.stringify({ table: targetTable.number }),
       });
       if (!res.ok) throw new Error("Failed to update guest table in DB");
 
-      // 3️⃣ Update local guest state to reflect DB
+      // 3️⃣ Update local guest state
       setGuests((prev) =>
         prev.map((g) =>
           g._id === guestId ? { ...g, table: targetTable.number } : g,
@@ -195,11 +227,11 @@ export default function SeatingPage() {
     maybe: { bg: "bg-blue-100/50", text: "text-blue-700" },
   };
 
-  const handleRemoveTable = (id: string) => {
-    if (tables.length > 1) {
-      setTables(tables.filter((t) => t.id !== id));
-    }
-  };
+  // const handleRemoveTable = (id: string) => {
+  //   if (tables.length > 1) {
+  //     setTables(tables.filter((t) => t.id !== id));
+  //   }
+  // };
 
   // const handleAddGuestToTable = (tableId: string, guestId: string) => {
   //   setTables(

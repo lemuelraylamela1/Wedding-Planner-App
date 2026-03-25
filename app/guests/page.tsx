@@ -314,14 +314,14 @@ export default function GuestsPage() {
 
   guest.forEach((g) => {
     // Dietary restrictions
-    const diet = g.dietaryRestrictions || "None";
+    const diet = g.dietaryRestrictions?.trim().toLowerCase() || "none";
     dietaryCounts[diet] = (dietaryCounts[diet] || 0) + 1;
 
     // Meal preferences
-    const meal = g.meal || "None";
+    const meal = g.meal?.trim().toLowerCase() || "none";
     mealCounts[meal] = (mealCounts[meal] || 0) + 1;
   });
-
+  const sortedMeals = Object.entries(mealCounts).sort((a, b) => b[1] - a[1]);
   return (
     <AppLayout>
       <div className="space-y-8">
@@ -561,7 +561,8 @@ export default function GuestsPage() {
             <h3 className="font-serif text-lg font-semibold text-foreground mb-4">
               Meal Summary
             </h3>
-            {Object.entries(mealCounts).map(([meal, count]) => (
+
+            {sortedMeals.map(([meal, count]) => (
               <div
                 key={meal}
                 className="flex items-center justify-between mb-2">
