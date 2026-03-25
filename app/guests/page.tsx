@@ -64,7 +64,7 @@ export interface Guests {
   contact: { email: string; number: string };
   meal?: string;
   rsvpStatus?: "accepted" | "declined" | "pending" | "maybe" | "";
-  table?: number;
+  table?: number | null;
   dietaryRestrictions?: string;
   createdAt?: string;
   updatedAt?: string;

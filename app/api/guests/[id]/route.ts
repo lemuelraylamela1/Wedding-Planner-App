@@ -70,7 +70,7 @@ export async function PATCH(
 
     // Update only the fields provided
     const updatedGuest = await Guests.findByIdAndUpdate(id, body, {
-      new: true,
+      returnDocument: "after",
     });
 
     if (!updatedGuest) {

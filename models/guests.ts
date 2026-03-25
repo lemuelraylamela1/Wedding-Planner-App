@@ -19,7 +19,6 @@ const guestSchema = new Schema(
     },
     table: {
       type: Number,
-      min: 1,
     },
     dietaryRestrictions: { type: String },
   },

@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/app-layout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Users, Trash2, Edit2, Download } from "lucide-react";
-import { initialGuests } from "@/lib/wedding-data";
+import { Guests } from "@/app/guests/page";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface Table {
   id: string;
@@ -15,43 +23,176 @@ interface Table {
   guests: string[];
 }
 
-const DEFAULT_TABLES: Table[] = [
-  { id: "1", number: 1, capacity: 8, guests: ["1", "3"] },
-  { id: "2", number: 2, capacity: 8, guests: [] },
-  { id: "3", number: 3, capacity: 8, guests: [] },
-  { id: "4", number: 4, capacity: 8, guests: [] },
-  { id: "5", number: 5, capacity: 8, guests: [] },
-];
-
 export default function SeatingPage() {
-  const [tables, setTables] = useState<Table[]>(DEFAULT_TABLES);
+  const [tables, setTables] = useState<Table[]>([]);
+  const [tableModalOpen, setTableModalOpen] = useState(false);
+  const [newTable, setNewTable] = useState({ number: "", capacity: "" });
   const [searchTerm, setSearchTerm] = useState("");
-  const guests = initialGuests;
+  const [draggedGuestId, setDraggedGuestId] = useState<string | null>(null);
+  const [guests, setGuests] = useState<Guests[]>([]);
+  const [editingTable, setEditingTable] = useState<Table | null>(null);
+  const [tableToRemove, setTableToRemove] = useState<Table | null>(null);
+  const [rsvpFilter, setRsvpFilter] = useState<string>("all");
+
+  useEffect(() => {
+    const fetchGuests = async () => {
+      try {
+        const res = await fetch("/api/guests");
+        if (!res.ok) throw new Error("Failed to fetch guests");
+        const data: Guests[] = await res.json();
+        setGuests(data);
+
+        // Generate tables automatically
+        const tableMap: Record<number, Table> = {};
+        data.forEach((guest) => {
+          if (guest.table) {
+            if (!tableMap[guest.table]) {
+              tableMap[guest.table] = {
+                id: String(guest.table),
+                number: guest.table,
+                capacity: 8, // default capacity
+                guests: [],
+              };
+            }
+            tableMap[guest.table].guests.push(guest._id);
+          }
+        });
+
+        // Sort tables by table number
+        const sortedTables = Object.values(tableMap).sort(
+          (a, b) => a.number - b.number,
+        );
+        setTables(sortedTables);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchGuests();
+  }, []);
 
   const seatedGuests = new Set(tables.flatMap((t) => t.guests));
-  const unseatedGuests = guests.filter((g) => !seatedGuests.has(g.id));
+  const unseatedGuests = guests.filter((g) => !seatedGuests.has(g._id));
 
   const getGuestsByIds = (ids: string[]) => {
     return ids
-      .map((id) => guests.find((g) => g.id === id))
-      .filter((g) => g !== undefined);
+      .map((id) => guests.find((g) => g._id === id))
+      .filter((g): g is Guests => g !== undefined);
   };
 
-  const filteredUnseatedGuests = unseatedGuests.filter((guest) =>
-    guest.name.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const filteredUnseatedGuests = unseatedGuests.filter((guest) => {
+    const matchesSearch = guest.guestName
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
 
-  const handleAddTable = () => {
-    const newTableNumber = Math.max(...tables.map((t) => t.number)) + 1;
-    setTables([
+    const matchesStatus =
+      rsvpFilter === "all" ? true : guest.rsvpStatus === rsvpFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const stats = {
+    total: guests.length,
+    seated: seatedGuests.size,
+    unseated: unseatedGuests.length,
+    tables: tables.length,
+    occupancy:
+      tables.length > 0
+        ? Math.round((seatedGuests.size / (tables.length * 8)) * 100)
+        : 0,
+  };
+
+  // const seatedGuests = new Set(tables.flatMap((t) => t.guests));
+  // const unseatedGuests = guests.filter((g) => !seatedGuests.has(g.id));
+
+  // const getGuestsByIds = (ids: string[]) => {
+  //   return ids
+  //     .map((id) => guests.find((g) => g.id === id))
+  //     .filter((g) => g !== undefined);
+  // };
+
+  // const filteredUnseatedGuests = unseatedGuests.filter((guest) =>
+  //   guest.name.toLowerCase().includes(searchTerm.toLowerCase()),
+  // );
+  const handleAddTable = (
+    tableNumber: string | number,
+    capacity: string | number,
+  ) => {
+    const number = Number(tableNumber);
+    const cap = Number(capacity);
+
+    if (!number || !cap) {
+      alert("Please enter valid table number and capacity.");
+      return;
+    }
+
+    // Prevent duplicate table numbers
+    if (tables.find((t) => t.number === number)) {
+      alert("This table number already exists.");
+      return;
+    }
+
+    const newTables = [
       ...tables,
       {
         id: String(Date.now()),
-        number: newTableNumber,
-        capacity: 8,
+        number,
+        capacity: cap,
         guests: [],
       },
-    ]);
+    ];
+
+    // Auto sort by table number
+    newTables.sort((a, b) => a.number - b.number);
+
+    setTables(newTables);
+  };
+
+  const handleMoveGuest = async (guestId: string, targetTableId: string) => {
+    const targetTable = tables.find((t) => t.id === targetTableId);
+    if (!targetTable) return;
+
+    // 1️⃣ Update local state
+    setTables((prevTables) =>
+      prevTables
+        .map((table) => ({
+          ...table,
+          guests: table.guests.filter((id) => id !== guestId),
+        }))
+        .map((table) => {
+          if (table.id === targetTableId) {
+            return { ...table, guests: [...table.guests, guestId] };
+          }
+          return table;
+        }),
+    );
+
+    // 2️⃣ Update the guest table in DB
+    try {
+      const res = await fetch(`/api/guests/${guestId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: targetTable.number }), // store the table number
+      });
+      if (!res.ok) throw new Error("Failed to update guest table in DB");
+
+      // 3️⃣ Update local guest state to reflect DB
+      setGuests((prev) =>
+        prev.map((g) =>
+          g._id === guestId ? { ...g, table: targetTable.number } : g,
+        ),
+      );
+    } catch (error) {
+      console.error(error);
+      alert("Failed to save guest table. Try again.");
+    }
+  };
+
+  const rsvpColors: Record<string, { bg: string; text: string }> = {
+    accepted: { bg: "bg-green-100/50", text: "text-green-700" },
+    declined: { bg: "bg-red-100/50", text: "text-red-700" },
+    pending: { bg: "bg-yellow-100/50", text: "text-yellow-700" },
+    maybe: { bg: "bg-blue-100/50", text: "text-blue-700" },
   };
 
   const handleRemoveTable = (id: string) => {
@@ -60,18 +201,22 @@ export default function SeatingPage() {
     }
   };
 
-  const handleAddGuestToTable = (tableId: string, guestId: string) => {
-    setTables(
-      tables.map((table) => {
-        if (table.id === tableId && !table.guests.includes(guestId)) {
-          return { ...table, guests: [...table.guests, guestId] };
-        }
-        return table;
-      }),
-    );
-  };
+  // const handleAddGuestToTable = (tableId: string, guestId: string) => {
+  //   setTables(
+  //     tables.map((table) => {
+  //       if (table.id === tableId && !table.guests.includes(guestId)) {
+  //         return { ...table, guests: [...table.guests, guestId] };
+  //       }
+  //       return table;
+  //     }),
+  //   );
+  // };
 
-  const handleRemoveGuestFromTable = (tableId: string, guestId: string) => {
+  const handleRemoveGuestFromTable = async (
+    tableId: string,
+    guestId: string,
+  ) => {
+    // Update the state first
     setTables(
       tables.map((table) => {
         if (table.id === tableId) {
@@ -83,17 +228,51 @@ export default function SeatingPage() {
         return table;
       }),
     );
+
+    // Update the guest in the database
+    try {
+      await fetch(`/api/guests/${guestId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: "" }), // set table to empty string
+      });
+    } catch (error) {
+      console.error("Failed to remove guest from table:", error);
+    }
   };
 
-  const stats = {
-    total: guests.length,
-    seated: seatedGuests.size,
-    unseated: unseatedGuests.length,
-    tables: tables.length,
-    occupancy:
-      tables.length > 0
-        ? Math.round((seatedGuests.size / (tables.length * 8)) * 100)
-        : 0,
+  // const stats = {
+  //   total: guests.length,
+  //   seated: seatedGuests.size,
+  //   unseated: unseatedGuests.length,
+  //   tables: tables.length,
+  //   occupancy:
+  //     tables.length > 0
+  //       ? Math.round((seatedGuests.size / (tables.length * 8)) * 100)
+  //       : 0,
+  // };
+
+  const handleUpdateTable = (id: string, number: number, capacity: number) => {
+    // Check for duplicate table number
+    if (tables.some((t) => t.id !== id && t.number === number)) {
+      alert("This table number already exists.");
+      return;
+    }
+
+    setTables((prevTables) =>
+      prevTables
+        .map((t) =>
+          t.id === id
+            ? {
+                ...t,
+                number,
+                capacity:
+                  capacity >= t.guests.length ? capacity : t.guests.length,
+              }
+            : t,
+        )
+        .sort((a, b) => a.number - b.number),
+    );
   };
 
   return (
@@ -151,6 +330,31 @@ export default function SeatingPage() {
                   {stats.unseated}
                 </span>
               </div>
+              {/* RSVP Legend */}
+              {/* RSVP Filter */}
+              <div className="flex items-center space-x-2 text-xs mb-2">
+                <div
+                  className={`px-2 py-1 rounded cursor-pointer ${
+                    rsvpFilter === "all"
+                      ? "bg-primary text-white"
+                      : "bg-gray-100 text-gray-700"
+                  }`}
+                  onClick={() => setRsvpFilter("all")}>
+                  All
+                </div>
+                {Object.entries(rsvpColors).map(([status, colors]) => (
+                  <div
+                    key={status}
+                    className={`px-2 py-1 rounded cursor-pointer ${colors.bg} ${colors.text} ${
+                      rsvpFilter === status
+                        ? "ring-2 ring-offset-1 ring-primary"
+                        : ""
+                    }`}
+                    onClick={() => setRsvpFilter(status)}>
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </div>
+                ))}
+              </div>
 
               <div className="relative mb-4">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -162,32 +366,35 @@ export default function SeatingPage() {
                 />
               </div>
 
+              {/* Unseated Guests */}
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {filteredUnseatedGuests.length > 0 ? (
                   filteredUnseatedGuests.map((guest) => (
                     <div
-                      key={guest.id}
-                      className="p-2 bg-muted/50 rounded-lg border border-border/50 hover:border-primary/50 transition-colors cursor-move"
-                      draggable>
-                      <p className="text-sm font-medium text-foreground">
-                        {guest.name}
+                      key={guest._id}
+                      className={`p-2 rounded-lg border cursor-move transition-colors ${
+                        rsvpColors[guest.rsvpStatus || "pending"].bg
+                      }`}
+                      draggable
+                      onDragStart={(e) => {
+                        setDraggedGuestId(guest._id);
+                        e.dataTransfer.effectAllowed = "move";
+                      }}>
+                      <p
+                        className={`text-sm font-medium ${
+                          rsvpColors[guest.rsvpStatus || "pending"].text
+                        }`}>
+                        {guest.guestName}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {guest.mealPreference}
+                        {guest.meal}
                       </p>
-                      {guest.dietaryRestrictions !== "None" && (
-                        <p className="text-xs text-amber-600 mt-1">
-                          {guest.dietaryRestrictions}
-                        </p>
-                      )}
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-6">
-                    <p className="text-sm text-muted-foreground">
-                      All guests are seated!
-                    </p>
-                  </div>
+                  <p className="text-center py-6 text-sm text-muted-foreground">
+                    All guests are seated!
+                  </p>
                 )}
               </div>
             </div>
@@ -199,154 +406,293 @@ export default function SeatingPage() {
               <h2 className="font-serif text-lg font-semibold text-foreground">
                 Tables
               </h2>
-              <Button
-                className="bg-primary hover:bg-primary/90 text-white"
-                size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Table
-              </Button>
+              <Dialog open={tableModalOpen} onOpenChange={setTableModalOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    className="bg-primary hover:bg-primary/90 text-white"
+                    size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Table
+                  </Button>
+                </DialogTrigger>
+
+                <DialogContent className="sm:max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle>Add New Table</DialogTitle>
+                  </DialogHeader>
+
+                  <div className="grid gap-4 py-2">
+                    <Input
+                      type="number"
+                      placeholder="Table Number"
+                      value={newTable.number}
+                      onChange={(e) =>
+                        setNewTable({ ...newTable, number: e.target.value })
+                      }
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Capacity"
+                      value={newTable.capacity}
+                      onChange={(e) =>
+                        setNewTable({ ...newTable, capacity: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <DialogFooter>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setTableModalOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        handleAddTable(newTable.number, newTable.capacity);
+                        setNewTable({ number: "", capacity: "" });
+                        setTableModalOpen(false);
+                      }}>
+                      Add Table
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              {tables.map((table) => {
-                const seatedAtTable = getGuestsByIds(table.guests);
-                const remaining = table.capacity - table.guests.length;
+              {tables.length > 0 ? (
+                <div
+                  className="grid gap-4 md:grid-cols-2"
+                  style={{ transition: "all 0.2s" }}>
+                  {tables.map((table) => {
+                    const seatedAtTable = getGuestsByIds(table.guests);
+                    const remaining = table.capacity - table.guests.length;
 
-                return (
-                  <div key={table.id} className="wedding-card p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="font-serif text-xl font-semibold text-foreground">
-                          Table {table.number}
-                        </h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {table.guests.length} of {table.capacity} seats
-                        </p>
-                      </div>
-                      {tables.length > 1 && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveTable(table.id)}
-                          className="text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-
-                    {/* Capacity Bar */}
-                    <div className="mb-4">
-                      <div className="h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary transition-all"
-                          style={{
-                            width: `${Math.round((table.guests.length / table.capacity) * 100)}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Seated Guests */}
-                    <div className="space-y-2 mb-4">
-                      {seatedAtTable.length > 0 ? (
-                        seatedAtTable.map((guest) => (
-                          <div
-                            key={guest.id}
-                            className="flex items-center justify-between p-2 bg-primary/5 rounded-lg border border-primary/20">
-                            <div>
-                              <p className="text-sm font-medium text-foreground">
-                                {guest.name}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {guest.mealPreference}
-                              </p>
-                            </div>
+                    return (
+                      <div
+                        key={table.id}
+                        className={`wedding-card p-6 border rounded-lg shadow-sm hover:shadow-md transition-all ${
+                          draggedGuestId
+                            ? "border-dashed border-2 border-primary/50"
+                            : ""
+                        }`}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={() => {
+                          if (draggedGuestId) {
+                            handleMoveGuest(draggedGuestId, table.id);
+                            setDraggedGuestId(null);
+                          }
+                        }}>
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-serif text-xl font-semibold text-foreground">
+                            Table {table.number}
+                          </h3>
+                          <div className="flex space-x-2">
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() =>
-                                handleRemoveGuestFromTable(table.id, guest.id)
-                              }
+                              onClick={() => setEditingTable(table)}
+                              className="h-8 w-8 text-muted-foreground hover:text-primary">
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setTableToRemove(table)}
                               className="h-8 w-8 text-muted-foreground hover:text-destructive">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
-                        ))
-                      ) : (
-                        <div className="text-center py-4">
-                          <Users className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
-                          <p className="text-sm text-muted-foreground">
-                            No guests assigned
-                          </p>
                         </div>
-                      )}
-                    </div>
 
-                    {/* Add Guest Button */}
-                    {remaining > 0 && (
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => {
-                          if (unseatedGuests.length > 0) {
-                            handleAddGuestToTable(
-                              table.id,
-                              unseatedGuests[0].id,
-                            );
-                          }
-                        }}
-                        disabled={unseatedGuests.length === 0}>
-                        Add Guest ({remaining} slots)
-                      </Button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+                        {/* Occupancy Bar */}
+                        <div className="w-full h-2 bg-gray-200 rounded-full mt-1 mb-2">
+                          <div
+                            className="h-2 rounded-full bg-primary"
+                            style={{
+                              width: `${((table.capacity - remaining) / table.capacity) * 100}%`,
+                            }}
+                          />
+                        </div>
 
-        {/* Summary */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="wedding-card p-6">
-            <h3 className="font-serif text-lg font-semibold text-foreground mb-4">
-              Seating Summary
-            </h3>
-            <div className="space-y-3">
-              {[
-                { label: "Total Guests", value: stats.total },
-                { label: "Seated", value: stats.seated },
-                { label: "Pending", value: stats.unseated },
-                { label: "Table Capacity", value: stats.tables * 8 },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">{item.label}</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {item.value}
-                  </p>
+                        <p className="text-sm text-muted-foreground">
+                          {table.guests.length} of {table.capacity} seats
+                        </p>
+
+                        {/* Guests */}
+                        <div className="space-y-2 mt-2">
+                          {seatedAtTable.map((guest) => (
+                            <div
+                              key={guest._id}
+                              className={`flex items-center justify-between p-2 rounded-lg border cursor-move transition-transform transform hover:scale-105 
+              ${rsvpColors[guest.rsvpStatus || "pending"].bg} border-primary/20`}
+                              draggable
+                              onDragStart={(e) => {
+                                setDraggedGuestId(guest._id);
+                                e.dataTransfer.effectAllowed = "move";
+                              }}>
+                              <div>
+                                <p
+                                  className={`text-sm font-medium ${rsvpColors[guest.rsvpStatus || "pending"].text}`}>
+                                  {guest.guestName}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {guest.meal}
+                                </p>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() =>
+                                  handleRemoveGuestFromTable(
+                                    table.id,
+                                    guest._id,
+                                  )
+                                }
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Remaining seats info */}
+                        {remaining > 0 && (
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {remaining} seat(s) available
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="wedding-card p-6">
-            <h3 className="font-serif text-lg font-semibold text-foreground mb-4">
-              Quick Actions
-            </h3>
-            <div className="space-y-2">
-              <Button variant="outline" className="w-full justify-start">
-                <Download className="mr-2 h-4 w-4" />
-                Export Seating Chart
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <Download className="mr-2 h-4 w-4" />
-                Print Place Cards
-              </Button>
+              ) : (
+                <p className="text-center text-sm text-muted-foreground py-6">
+                  No tables assigned yet.
+                </p>
+              )}
             </div>
           </div>
         </div>
+        <Dialog
+          open={!!editingTable}
+          onOpenChange={() => setEditingTable(null)}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Edit Table</DialogTitle>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-2">
+              <Input
+                type="number"
+                placeholder="Table Number"
+                value={editingTable?.number || ""}
+                onChange={(e) =>
+                  setEditingTable(
+                    editingTable
+                      ? { ...editingTable, number: Number(e.target.value) }
+                      : null,
+                  )
+                }
+              />
+              <Input
+                type="number"
+                placeholder="Capacity"
+                value={editingTable?.capacity || ""}
+                onChange={(e) =>
+                  setEditingTable(
+                    editingTable
+                      ? { ...editingTable, capacity: Number(e.target.value) }
+                      : null,
+                  )
+                }
+              />
+              {editingTable &&
+                editingTable.guests.length > editingTable.capacity && (
+                  <p className="text-xs text-red-600">
+                    Capacity cannot be less than seated guests (
+                    {editingTable.guests.length})
+                  </p>
+                )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setEditingTable(null)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (editingTable) {
+                    handleUpdateTable(
+                      editingTable.id,
+                      editingTable.number,
+                      editingTable.capacity,
+                    );
+                  }
+                  setEditingTable(null);
+                }}>
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={!!tableToRemove}
+          onOpenChange={() => setTableToRemove(null)}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Remove Table</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground py-2">
+              Are you sure you want to remove Table {tableToRemove?.number}?{" "}
+              <br />
+              All guests assigned to this table will be unseated.
+            </p>
+
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setTableToRemove(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  if (!tableToRemove) return;
+
+                  const guestIds = tableToRemove.guests;
+
+                  setGuests((prev) =>
+                    prev.map((g) =>
+                      guestIds.includes(g._id) ? { ...g, table: null } : g,
+                    ),
+                  );
+
+                  // 2️⃣ Update DB for each guest (optional: you can batch in backend)
+                  for (const guestId of guestIds) {
+                    try {
+                      await fetch(`/api/guests/${guestId}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ table: "" }),
+                      });
+                    } catch (err) {
+                      console.error("Failed to reset guest table:", err);
+                    }
+                  }
+
+                  // 3️⃣ Remove the table locally
+                  setTables((prev) =>
+                    prev.filter((t) => t.id !== tableToRemove.id),
+                  );
+
+                  // Close modal
+                  setTableToRemove(null);
+                }}>
+                Remove Table
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
