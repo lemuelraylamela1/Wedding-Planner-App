@@ -94,9 +94,29 @@ export default function GuestsPage() {
   const [errors, setErrors] = useState<{
     guestName?: string;
     email?: string;
-    number?: string;
     table?: string;
   }>({});
+
+  const validateForm = () => {
+    const newErrors: typeof errors = {};
+
+    // Guest Name required
+    if (!form.guestName.trim()) {
+      newErrors.guestName = "Guest Name is required";
+    }
+
+    // Email required and valid format
+    if (!form.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^\S+@\S+\.\S+$/.test(form.email)) {
+      newErrors.email = "Email is invalid";
+    }
+
+    setErrors(newErrors);
+
+    // Return true if no errors
+    return Object.keys(newErrors).length === 0;
+  };
 
   const filteredGuests = guest.filter((g) => {
     const name = g.guestName || "";
@@ -147,13 +167,25 @@ export default function GuestsPage() {
     }
   }, [editingGuestId]);
 
+  useEffect(() => {
+    if (!open) {
+      setForm({
+        guestName: "",
+        email: "",
+        number: "",
+        meal: "",
+        rsvpStatus: "pending",
+        table: "",
+        dietaryRestrictions: "",
+      });
+      setErrors({}); // Clear all errors
+    }
+  }, [open]);
+
   //Add Guests
   const handleAddGuest = async () => {
     // Simple validation
-    if (!form.guestName || !form.email || !form.number) {
-      alert("Please fill in Guest Name, Email, and Phone Number.");
-      return;
-    }
+    if (!validateForm()) return;
 
     if (!session?.user?.id) {
       alert("You must be logged in to add a guest.");
@@ -229,11 +261,7 @@ export default function GuestsPage() {
       return;
     }
 
-    // Simple validation
-    if (!form.guestName || !form.email || !form.number) {
-      alert("Please fill in Guest Name, Email, and Phone Number.");
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
 
@@ -281,36 +309,19 @@ export default function GuestsPage() {
     }
   };
 
-  const handleDeleteGuest = async (guestId: string) => {
-    if (!guestId) return;
+  const dietaryCounts: Record<string, number> = {};
+  const mealCounts: Record<string, number> = {};
 
-    // Optional: confirmation before deleting
-    const confirmDelete = confirm(
-      "Are you sure you want to delete this guest?",
-    );
-    if (!confirmDelete) return;
+  guest.forEach((g) => {
+    // Dietary restrictions
+    const diet = g.dietaryRestrictions || "None";
+    dietaryCounts[diet] = (dietaryCounts[diet] || 0) + 1;
 
-    setLoading(true);
+    // Meal preferences
+    const meal = g.meal || "None";
+    mealCounts[meal] = (mealCounts[meal] || 0) + 1;
+  });
 
-    try {
-      const res = await fetch(`/api/guests/${guestId}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "Failed to delete guest");
-      }
-
-      // Refresh guest list after deletion
-      fetchGuests();
-    } catch (error: unknown) {
-      console.error("Error deleting guest:", error);
-      alert((error as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
   return (
     <AppLayout>
       <div className="space-y-8">
@@ -379,9 +390,10 @@ export default function GuestsPage() {
                 <Input
                   placeholder="Guest Name"
                   value={form.guestName}
-                  onChange={(e) =>
-                    setForm({ ...form, guestName: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setForm({ ...form, guestName: e.target.value });
+                    setErrors({ ...errors, guestName: undefined });
+                  }}
                 />
                 {errors.guestName && (
                   <p className="text-red-500 text-sm">{errors.guestName}</p>
@@ -389,7 +401,10 @@ export default function GuestsPage() {
                 <Input
                   placeholder="Email"
                   value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  onChange={(e) => {
+                    setForm({ ...form, email: e.target.value });
+                    setErrors({ ...errors, email: undefined });
+                  }}
                 />
                 {errors.email && (
                   <p className="text-red-500 text-sm">{errors.email}</p>
@@ -399,9 +414,6 @@ export default function GuestsPage() {
                   value={form.number}
                   onChange={(e) => setForm({ ...form, number: e.target.value })}
                 />
-                {errors.number && (
-                  <p className="text-red-500 text-sm">{errors.number}</p>
-                )}
                 <Input
                   placeholder="Meal Preference"
                   value={form.meal}
@@ -437,6 +449,9 @@ export default function GuestsPage() {
                   value={form.table}
                   onChange={(e) => setForm({ ...form, table: e.target.value })}
                 />
+                {errors.table && (
+                  <p className="text-red-500 text-sm">{errors.table}</p>
+                )}
                 <Input
                   placeholder="Dietary Restrictions"
                   value={form.dietaryRestrictions}
@@ -541,22 +556,35 @@ export default function GuestsPage() {
 
         {/* Dietary Summary */}
         <div className="grid gap-4 md:grid-cols-2">
-          {["Vegetarian", "None"].map((diet) => (
-            <div key={diet} className="wedding-card p-6">
-              <h3 className="font-serif text-lg font-semibold text-foreground mb-4">
-                {diet} Summary
-              </h3>
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">{diet}</p>
-                <p className="font-medium text-foreground">
-                  {
-                    guest.filter((g) => (g.dietaryRestrictions || "") === diet)
-                      .length
-                  }
-                </p>
+          {/* Meal Summary */}
+          <div className="wedding-card p-6">
+            <h3 className="font-serif text-lg font-semibold text-foreground mb-4">
+              Meal Summary
+            </h3>
+            {Object.entries(mealCounts).map(([meal, count]) => (
+              <div
+                key={meal}
+                className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">{meal}</p>
+                <p className="font-medium text-foreground">{count}</p>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+
+          {/* Dietary Summary */}
+          <div className="wedding-card p-6">
+            <h3 className="font-serif text-lg font-semibold text-foreground mb-4">
+              Dietary Restrictions Summary
+            </h3>
+            {Object.entries(dietaryCounts).map(([diet, count]) => (
+              <div
+                key={diet}
+                className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">{diet}</p>
+                <p className="font-medium text-foreground">{count}</p>
+              </div>
+            ))}
+          </div>
         </div>
         {/* Edit Guest Modal */}
         <Dialog
@@ -570,9 +598,10 @@ export default function GuestsPage() {
               <Input
                 placeholder="Guest Name"
                 value={form.guestName}
-                onChange={(e) =>
-                  setForm({ ...form, guestName: e.target.value })
-                }
+                onChange={(e) => {
+                  setForm({ ...form, guestName: e.target.value });
+                  setErrors({ ...errors, guestName: undefined });
+                }}
               />
               {errors.guestName && (
                 <p className="text-red-500 text-sm">{errors.guestName}</p>
@@ -581,7 +610,10 @@ export default function GuestsPage() {
               <Input
                 placeholder="Email"
                 value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, email: e.target.value });
+                  setErrors({ ...errors, email: undefined });
+                }}
               />
               {errors.email && (
                 <p className="text-red-500 text-sm">{errors.email}</p>
@@ -592,9 +624,6 @@ export default function GuestsPage() {
                 value={form.number}
                 onChange={(e) => setForm({ ...form, number: e.target.value })}
               />
-              {errors.number && (
-                <p className="text-red-500 text-sm">{errors.number}</p>
-              )}
 
               <Input
                 placeholder="Meal Preference"
