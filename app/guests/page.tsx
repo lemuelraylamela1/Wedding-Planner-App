@@ -12,7 +12,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Plus, Mail, Phone, Check, X, Clock } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Mail,
+  Phone,
+  Check,
+  X,
+  Clock,
+  Edit2,
+  Trash2,
+} from "lucide-react";
 import {
   Dialog,
   DialogTrigger,
@@ -67,6 +77,10 @@ export default function GuestsPage() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [editingGuestId, setEditingGuestId] = useState("");
+  const [deleteGuestId, setDeleteGuestId] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [form, setForm] = useState({
     guestName: "",
     email: "",
@@ -76,7 +90,6 @@ export default function GuestsPage() {
     table: "",
     dietaryRestrictions: "",
   });
-  const [editingGuestId, setEditingGuestId] = useState<string | null>(null);
 
   const [errors, setErrors] = useState<{
     guestName?: string;
@@ -118,6 +131,22 @@ export default function GuestsPage() {
     fetchGuests();
   }, []);
 
+  useEffect(() => {
+    if (!editingGuestId) {
+      // Reset form when Edit Guest modal is closed
+      setForm({
+        guestName: "",
+        email: "",
+        number: "",
+        meal: "",
+        rsvpStatus: "pending",
+        table: "",
+        dietaryRestrictions: "",
+      });
+      setErrors({});
+    }
+  }, [editingGuestId]);
+
   //Add Guests
   const handleAddGuest = async () => {
     // Simple validation
@@ -136,7 +165,7 @@ export default function GuestsPage() {
     try {
       // Prepare payload matching your backend
       const payload = {
-        userId: session.user.id, // ⚡ required by backend
+        userId: session.user.id,
         guestName: form.guestName,
         contact: { email: form.email, number: form.number },
         meal: form.meal,
@@ -180,8 +209,108 @@ export default function GuestsPage() {
     }
   };
 
-  //Edit Guests
+  const handleEditGuest = (guest: Guests) => {
+    setForm({
+      guestName: guest.guestName,
+      email: guest.contact.email,
+      number: guest.contact.number,
+      meal: guest.meal || "",
+      rsvpStatus: guest.rsvpStatus || "",
+      table: guest.table?.toString() || "",
+      dietaryRestrictions: guest.dietaryRestrictions || "",
+    });
+    setEditingGuestId(guest._id);
+  };
 
+  // Call this when submitting the edit modal
+  const handleUpdateGuest = async () => {
+    if (!editingGuestId) {
+      alert("No guest selected for editing.");
+      return;
+    }
+
+    // Simple validation
+    if (!form.guestName || !form.email || !form.number) {
+      alert("Please fill in Guest Name, Email, and Phone Number.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const payload = {
+        guestName: form.guestName,
+        contact: { email: form.email, number: form.number },
+        meal: form.meal,
+        rsvpStatus: form.rsvpStatus,
+        table: form.table ? Number(form.table) : undefined,
+        dietaryRestrictions: form.dietaryRestrictions,
+      };
+
+      const res = await fetch(`/api/guests/${editingGuestId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to update guest");
+      }
+
+      // Refresh guest list
+      fetchGuests();
+
+      // Reset form and close modal
+      setForm({
+        guestName: "",
+        email: "",
+        number: "",
+        meal: "",
+        rsvpStatus: "pending",
+        table: "",
+        dietaryRestrictions: "",
+      });
+      setEditingGuestId("");
+      setOpen(false);
+    } catch (error: unknown) {
+      console.error("Error updating guest:", error);
+      alert((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteGuest = async (guestId: string) => {
+    if (!guestId) return;
+
+    // Optional: confirmation before deleting
+    const confirmDelete = confirm(
+      "Are you sure you want to delete this guest?",
+    );
+    if (!confirmDelete) return;
+
+    setLoading(true);
+
+    try {
+      const res = await fetch(`/api/guests/${guestId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to delete guest");
+      }
+
+      // Refresh guest list after deletion
+      fetchGuests();
+    } catch (error: unknown) {
+      console.error("Error deleting guest:", error);
+      alert((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <AppLayout>
       <div className="space-y-8">
@@ -244,9 +373,7 @@ export default function GuestsPage() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg">
               <DialogHeader>
-                <DialogTitle>
-                  {editingGuestId ? "Edit Guest" : "Add New Guest"}
-                </DialogTitle>
+                <DialogTitle>Add New Guest</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <Input
@@ -346,7 +473,9 @@ export default function GuestsPage() {
                   ].map((th, idx) => (
                     <th
                       key={idx}
-                      className="px-6 py-3 text-left text-sm font-semibold text-foreground">
+                      className={`px-6 py-3 text-sm font-semibold text-foreground ${
+                        th === "Actions" ? "text-right" : "text-left"
+                      }`}>
                       {th}
                     </th>
                   ))}
@@ -386,8 +515,21 @@ export default function GuestsPage() {
                     </td>
                     <td className="px-6 py-4">{g.table || "-"}</td>
                     <td className="px-6 py-4 text-right">
-                      <Button variant="ghost" size="sm">
-                        Edit
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditGuest(g)}>
+                        <Edit2 />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="ml-2"
+                        onClick={() => {
+                          setDeleteGuestId(g._id);
+                          setDeleteOpen(true);
+                        }}>
+                        <Trash2 />
                       </Button>
                     </td>
                   </tr>
@@ -416,6 +558,149 @@ export default function GuestsPage() {
             </div>
           ))}
         </div>
+        {/* Edit Guest Modal */}
+        <Dialog
+          open={!!editingGuestId}
+          onOpenChange={() => setEditingGuestId("")}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit Guest</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <Input
+                placeholder="Guest Name"
+                value={form.guestName}
+                onChange={(e) =>
+                  setForm({ ...form, guestName: e.target.value })
+                }
+              />
+              {errors.guestName && (
+                <p className="text-red-500 text-sm">{errors.guestName}</p>
+              )}
+
+              <Input
+                placeholder="Email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+              />
+              {errors.email && (
+                <p className="text-red-500 text-sm">{errors.email}</p>
+              )}
+
+              <Input
+                placeholder="Phone Number"
+                value={form.number}
+                onChange={(e) => setForm({ ...form, number: e.target.value })}
+              />
+              {errors.number && (
+                <p className="text-red-500 text-sm">{errors.number}</p>
+              )}
+
+              <Input
+                placeholder="Meal Preference"
+                value={form.meal}
+                onChange={(e) => setForm({ ...form, meal: e.target.value })}
+              />
+
+              <Select
+                value={
+                  form.rsvpStatus as
+                    | "accepted"
+                    | "declined"
+                    | "pending"
+                    | "maybe"
+                }
+                onValueChange={(
+                  value: "accepted" | "declined" | "pending" | "maybe",
+                ) => setForm({ ...form, rsvpStatus: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="RSVP Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["accepted", "declined", "pending", "maybe"].map(
+                    (status) => (
+                      <SelectItem key={status} value={status}>
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
+
+              <Input
+                placeholder="Table Number"
+                type="number"
+                value={form.table}
+                onChange={(e) => setForm({ ...form, table: e.target.value })}
+              />
+              <Input
+                placeholder="Dietary Restrictions"
+                value={form.dietaryRestrictions}
+                onChange={(e) =>
+                  setForm({ ...form, dietaryRestrictions: e.target.value })
+                }
+              />
+            </div>
+
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setEditingGuestId("")}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateGuest} disabled={loading}>
+                {loading ? "Saving..." : "Update Guest"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Modal */}
+        <Dialog open={deleteOpen} onOpenChange={() => setDeleteOpen(false)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Delete Guest</DialogTitle>
+            </DialogHeader>
+            <p className="py-4 text-sm text-muted-foreground">
+              Are you sure you want to delete this guest? This action cannot be
+              undone.
+            </p>
+            <DialogFooter className="flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => setDeleteOpen(false)}
+                disabled={deleteLoading}>
+                Cancel
+              </Button>
+              <Button
+                className="bg-primary"
+                onClick={async () => {
+                  if (!deleteGuestId) return;
+                  setDeleteLoading(true);
+                  try {
+                    const res = await fetch(`/api/guests/${deleteGuestId}`, {
+                      method: "DELETE",
+                    });
+                    if (!res.ok) {
+                      const errorData = await res.json();
+                      throw new Error(
+                        errorData.error || "Failed to delete guest",
+                      );
+                    }
+                    fetchGuests(); // Refresh guest list
+                    setDeleteGuestId(null);
+                    setDeleteOpen(false);
+                  } catch (error: unknown) {
+                    console.error("Error deleting guest:", error);
+                    alert((error as Error).message);
+                  } finally {
+                    setDeleteLoading(false);
+                  }
+                }}
+                disabled={deleteLoading}>
+                {deleteLoading ? "Deleting..." : "Delete"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
