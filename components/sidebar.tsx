@@ -24,7 +24,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/guests", label: "Guests", icon: Users },
   { href: "/wedding-details", label: "Wedding Details", icon: Heart },
-  { href: "/timeline", label: "Timeline", icon: Calendar },
+  { href: "/timeline", label: "OTD Timeline", icon: Calendar },
   { href: "/budget", label: "Budget", icon: DollarSign },
   { href: "/suppliers", label: "Suppliers", icon: Factory },
   { href: "/seating", label: "Seating", icon: Armchair },

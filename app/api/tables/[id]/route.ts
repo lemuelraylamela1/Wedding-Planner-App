@@ -1,18 +1,18 @@
 // app/api/tables/[id]/route.ts
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectMongoDB } from "@/lib/mongodb";
 import { Tables } from "@/models/table";
 import mongoose from "mongoose";
 
 export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } },
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
     await connectMongoDB();
 
-    const { id } = params;
+    const { id } = await context.params; // ✅ FIX
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
@@ -24,7 +24,7 @@ export async function PATCH(
     const updated = await Tables.findByIdAndUpdate(
       id,
       { number, capacity },
-      { returnDocument: "after" }, // ✅ fixed mongoose warning
+      { new: true }, // mongoose correct option
     );
 
     if (!updated) {
@@ -42,13 +42,13 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } },
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> },
 ) {
   try {
     await connectMongoDB();
 
-    const { id } = params;
+    const { id } = await context.params; // ✅ FIX
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
