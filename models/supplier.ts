@@ -12,9 +12,11 @@ const supplierSchema = new Schema(
     contact: { type: String },
     email: { type: String },
     phone: { type: String },
+    facebook: { type: String },
     cost: { type: Number, default: 0 },
     notes: { type: String },
     userId: { type: String, required: true },
+    headCount: { type: Number },
   },
   { timestamps: true },
 );

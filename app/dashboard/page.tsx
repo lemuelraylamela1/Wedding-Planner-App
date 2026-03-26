@@ -94,12 +94,21 @@ export default function Dashboard() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const weddingDay = new Date(wedding.date);
-  weddingDay.setHours(0, 0, 0, 0);
+  let daysUntilWedding: number | null = null;
 
-  const daysUntilWedding = Math.floor(
-    (weddingDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-  );
+  if (wedding.date) {
+    const weddingDay = new Date(wedding.date);
+
+    if (!isNaN(weddingDay.getTime())) {
+      weddingDay.setHours(0, 0, 0, 0);
+      daysUntilWedding = Math.floor(
+        (weddingDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+      );
+    }
+  }
+
+  const budgetPercent =
+    totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
 
   return (
     <AppLayout>
@@ -111,11 +120,13 @@ export default function Dashboard() {
           </h1>
           <p className="heading-sub">
             {wedding.location} •{" "}
-            {new Date(wedding.date).toLocaleDateString("en-PH", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
+            {wedding.date
+              ? new Date(wedding.date).toLocaleDateString("en-PH", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })
+              : "Date not set"}
           </p>
         </div>
 
@@ -127,7 +138,7 @@ export default function Dashboard() {
                 Days Until Wedding
               </p>
               <p className="mt-1 text-4xl font-serif font-bold text-primary">
-                {daysUntilWedding}
+                {daysUntilWedding ?? "--"}
               </p>
             </div>
             <Heart className="h-16 w-16 text-primary/20" />
@@ -151,7 +162,7 @@ export default function Dashboard() {
           <StatCard
             icon={DollarSign}
             label="Budget Status"
-            value={`${Math.round((totalSpent / totalBudget) * 100)}%`}
+            value={`${budgetPercent}%`}
             subtext={`$${totalSpent.toLocaleString()} of $${totalBudget.toLocaleString()}`}
           />
           <StatCard

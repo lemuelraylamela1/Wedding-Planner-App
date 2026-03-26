@@ -16,7 +16,7 @@ import {
   Search,
   Mail,
   Phone,
-  DollarSign,
+  Facebook,
   CheckCircle2,
   Clock,
 } from "lucide-react";
@@ -74,9 +74,11 @@ export interface Supplier {
   contact?: string;
   email?: string;
   phone?: string;
+  facebook?: string;
   cost?: number;
   notes?: string;
   userId?: string; // optional if you want to track the owner
+  headCount?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -99,7 +101,9 @@ export default function SuppliersPage() {
     contact: "",
     email: "",
     phone: "",
+    facebook: "",
     cost: 0,
+    headCount: 0,
     notes: "",
   });
   const [loading, setLoading] = useState(false);
@@ -157,7 +161,9 @@ export default function SuppliersPage() {
         contact: "",
         email: "",
         phone: "",
+        facebook: "",
         cost: 0,
+        headCount: 0,
         notes: "",
       });
       setErrors({});
@@ -173,7 +179,9 @@ export default function SuppliersPage() {
         contact: "",
         email: "",
         phone: "",
+        facebook: "",
         cost: 0,
+        headCount: 0,
         notes: "",
       });
       setErrors({}); // Clear all errors
@@ -225,7 +233,9 @@ export default function SuppliersPage() {
         contact: form.contact,
         email: form.email,
         phone: form.phone,
+        facebook: form.facebook,
         cost: form.cost ? Number(form.cost) : 0,
+        headCount: form.headCount,
         notes: form.notes,
       };
 
@@ -253,7 +263,9 @@ export default function SuppliersPage() {
         contact: "",
         email: "",
         phone: "",
+        facebook: "",
         cost: 0,
+        headCount: 0,
         notes: "",
       });
       setOpen(false);
@@ -273,7 +285,9 @@ export default function SuppliersPage() {
       contact: supplier.contact?.toString() || "",
       email: supplier.email?.toString() || "",
       phone: supplier.phone?.toString() || "",
+      facebook: supplier.facebook?.toString() || "",
       cost: supplier.cost || 0,
+      headCount: supplier.headCount || 0,
       notes: supplier.notes || "",
     });
     setEditingSupplierId(supplier._id);
@@ -298,7 +312,9 @@ export default function SuppliersPage() {
         contact: form.contact,
         email: form.email,
         phone: form.phone,
+        facebook: form.facebook,
         cost: form.cost,
+        headCount: form.headCount,
         notes: form.notes,
       };
 
@@ -324,7 +340,9 @@ export default function SuppliersPage() {
         contact: "",
         email: "",
         phone: "",
+        facebook: "",
         cost: 0,
+        headCount: 0,
         notes: "",
       });
       setEditingSupplierId("");
@@ -427,79 +445,115 @@ export default function SuppliersPage() {
           {filteredSuppliers.length ? (
             filteredSuppliers.map((supplier) => {
               const statusColor = statusColors[supplier.status];
+
               return (
                 <div
                   key={supplier._id}
-                  className="wedding-card p-6 flex flex-col">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="font-serif text-lg font-semibold text-foreground">
+                  className="wedding-card group p-6 flex flex-col hover:shadow-xl transition-all duration-300 border border-border/60">
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-5">
+                    <div className="space-y-1">
+                      <h3 className="font-serif text-xl font-semibold text-foreground leading-none">
                         {supplier.name}
                       </h3>
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <p className="text-sm text-muted-foreground">
                         {supplier.category}
                       </p>
                     </div>
+
                     <div
-                      className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${statusColor.bg} ${statusColor.text}`}>
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold tracking-wide ${statusColor.bg} ${statusColor.text}`}>
                       {statusColor.icon}
                       <span className="capitalize">{supplier.status}</span>
                     </div>
                   </div>
 
-                  <div className="space-y-3 flex-1 mb-4 pb-4 border-b border-border/50">
+                  {/* Highlight Row (Cost + Headcount) */}
+                  <div className="flex items-center justify-between bg-muted/40 rounded-lg p-3 mb-4">
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">
+                      <p className="text-xs text-muted-foreground">Headcount</p>
+                      <p className="text-lg font-semibold text-foreground">
+                        {supplier.headCount || "--"}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Cost</p>
+                      <p className="text-lg font-semibold text-primary">
+                        ₱{supplier.cost?.toLocaleString() || "0"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Contact Info */}
+                  <div className="space-y-3 flex-1 mb-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground">
                         Contact Person
                       </p>
                       <p className="text-sm font-medium text-foreground">
                         {supplier.contact}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    <div className="flex items-center gap-3 text-sm">
                       <Mail className="h-4 w-4 text-muted-foreground" />
                       <a
                         href={`mailto:${supplier.email}`}
-                        className="text-sm text-primary hover:underline">
+                        className="text-primary hover:underline truncate">
                         {supplier.email}
                       </a>
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    <div className="flex items-center gap-3 text-sm">
                       <Phone className="h-4 w-4 text-muted-foreground" />
                       <a
                         href={`tel:${supplier.phone}`}
-                        className="text-sm text-primary hover:underline">
+                        className="text-primary hover:underline">
                         {supplier.phone}
                       </a>
                     </div>
-                    <div className="flex items-center gap-2">
-                      ₱
-                      <p className="text-sm font-medium text-foreground">
-                        {supplier.cost?.toLocaleString()}
-                      </p>
-                    </div>
-                    {supplier.notes && (
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Notes
-                        </p>
-                        <p className="text-sm text-foreground">
-                          {supplier.notes}
-                        </p>
+
+                    {supplier.facebook && (
+                      <div className="flex items-center gap-3 text-sm">
+                        <Facebook className="h-4 w-4 text-muted-foreground" />
+                        <a
+                          href={
+                            supplier.facebook.startsWith("http")
+                              ? supplier.facebook
+                              : `https://facebook.com/${supplier.facebook}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline truncate">
+                          {supplier.facebook}
+                        </a>
                       </div>
                     )}
                   </div>
 
-                  <div className="flex gap-2">
+                  {/* Notes */}
+                  {supplier.notes && (
+                    <div className="bg-primary/5 border border-primary/20 rounded-md p-3 mb-4">
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Notes
+                      </p>
+                      <p className="text-sm text-foreground leading-relaxed">
+                        {supplier.notes}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex gap-2 mt-auto">
                     <Button
                       variant="outline"
-                      className="flex-1"
+                      className="flex-1 group-hover:border-primary group-hover:text-primary transition"
                       onClick={() => handleEditSupplier(supplier)}>
                       Edit
                     </Button>
                     <Button
                       variant="ghost"
-                      className="flex-1"
+                      className="flex-1 text-destructive hover:text-destructive"
                       onClick={() => {
                         setDeleteSupplierId(supplier._id);
                         setDeleteOpen(true);
@@ -511,8 +565,8 @@ export default function SuppliersPage() {
               );
             })
           ) : (
-            <div className="col-span-full text-center py-12">
-              <p className="text-muted-foreground">
+            <div className="col-span-full text-center py-16">
+              <p className="text-muted-foreground text-sm">
                 No suppliers match your search
               </p>
             </div>
@@ -588,11 +642,24 @@ export default function SuppliersPage() {
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
             />
             <Input
+              placeholder="Facebook"
+              value={form.facebook}
+              onChange={(e) => setForm({ ...form, facebook: e.target.value })}
+            />
+            <Input
               placeholder="Cost"
               type="number"
               value={form.cost}
               onChange={(e) =>
                 setForm({ ...form, cost: Number(e.target.value) })
+              }
+            />
+            <Input
+              placeholder="Head Count"
+              type="number"
+              value={form.headCount}
+              onChange={(e) =>
+                setForm({ ...form, headCount: Number(e.target.value) })
               }
             />
             <Input
@@ -683,11 +750,24 @@ export default function SuppliersPage() {
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
             />
             <Input
+              placeholder="Facebook"
+              value={form.facebook}
+              onChange={(e) => setForm({ ...form, facebook: e.target.value })}
+            />
+            <Input
               placeholder="Cost"
               type="number"
               value={form.cost}
               onChange={(e) =>
                 setForm({ ...form, cost: Number(e.target.value) })
+              }
+            />
+            <Input
+              placeholder="Head Count"
+              type="number"
+              value={form.headCount}
+              onChange={(e) =>
+                setForm({ ...form, headCount: Number(e.target.value) })
               }
             />
             <Input
