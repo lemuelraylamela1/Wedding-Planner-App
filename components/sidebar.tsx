@@ -14,6 +14,7 @@ import {
   LogOut,
   Menu,
   X,
+  Factory,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -25,7 +26,7 @@ const navItems = [
   { href: "/wedding-details", label: "Wedding Details", icon: Heart },
   { href: "/timeline", label: "Timeline", icon: Calendar },
   { href: "/budget", label: "Budget", icon: DollarSign },
-  { href: "/vendors", label: "Vendors", icon: Users2 },
+  { href: "/suppliers", label: "Suppliers", icon: Factory },
   { href: "/seating", label: "Seating", icon: Armchair },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

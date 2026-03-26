@@ -362,7 +362,6 @@ export default function SeatingPage() {
                   {stats.unseated}
                 </span>
               </div>
-              {/* RSVP Legend */}
               {/* RSVP Filter */}
               <div className="flex items-center space-x-2 text-xs mb-2">
                 <div
@@ -491,7 +490,7 @@ export default function SeatingPage() {
               </Dialog>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 ">
               {tables.length > 0 ? (
                 <div
                   className="grid gap-4 md:grid-cols-2"
@@ -687,7 +686,7 @@ export default function SeatingPage() {
                 Cancel
               </Button>
               <Button
-                variant="destructive"
+                className="bg-primary"
                 onClick={async () => {
                   if (!tableToRemove) return;
 
