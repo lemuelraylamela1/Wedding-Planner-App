@@ -6,7 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 
 // TypeScript type for Guest
-type Guest = {
+type Guests = {
   userId: string;
   guestName?: string;
   contact?: {
@@ -26,7 +26,13 @@ type Guest = {
 export async function GET() {
   try {
     await connectMongoDB();
-    const guests = await Guests.find();
+
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const guests = await Guests.find({ userId: session.user.id });
     return NextResponse.json(guests, { status: 200 });
   } catch (error) {
     return NextResponse.json({ error }, { status: 500 });
@@ -50,7 +56,7 @@ export async function POST(req: Request) {
 
     // Attach logged-in userId
     const newGuest = await Guests.create({
-      userId: body.userId,
+      userId: session?.user?.id,
       guestName: body.guestName,
       contact: body.contact,
       meal: body.meal,

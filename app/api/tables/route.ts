@@ -3,12 +3,19 @@
 import { NextResponse } from "next/server";
 import { connectMongoDB } from "@/lib/mongodb";
 import { Tables } from "@/models/table";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/route";
 
 export async function GET() {
   try {
     await connectMongoDB();
 
-    const tables = await Tables.find().sort({ number: 1 });
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const tables = await Tables.find({ userId: session.user.id });
 
     return NextResponse.json(tables);
   } catch (error) {
@@ -23,6 +30,11 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     await connectMongoDB();
+
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const body = await req.json();
     const { number, capacity } = body;
@@ -43,6 +55,7 @@ export async function POST(req: Request) {
     }
 
     const table = await Tables.create({
+      userId: session?.user?.id,
       number,
       capacity,
       guests: [],

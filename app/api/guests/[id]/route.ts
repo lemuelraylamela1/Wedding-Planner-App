@@ -16,6 +16,12 @@ export async function GET(
   try {
     await connectMongoDB();
 
+    // Get logged-in user
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await context.params;
 
     if (!id) {
@@ -25,7 +31,8 @@ export async function GET(
       );
     }
 
-    const guest = await Guests.findById(id);
+    // Find guest by ID **and** ensure it belongs to the logged-in user
+    const guest = await Guests.findOne({ _id: id, userId: session.user.id });
 
     if (!guest) {
       return NextResponse.json({ error: "Guest not found" }, { status: 404 });

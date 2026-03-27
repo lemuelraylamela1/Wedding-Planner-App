@@ -1,7 +1,7 @@
 // app/api/guests/[id]/route.ts
 import { NextResponse } from "next/server";
 import { connectMongoDB } from "@/lib/mongodb";
-import Suppliers from "@/models/supplier";
+import Entourage from "@/models/entourage";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
@@ -16,23 +16,23 @@ export async function GET(
 
     if (!id) {
       return NextResponse.json(
-        { error: "Supplier ID is required" },
+        { error: "Entourage ID is required" },
         { status: 400 },
       );
     }
 
-    const supplier = await Suppliers.findById(id);
+    const entourage = await Entourage.findById(id);
 
-    if (!supplier) {
+    if (!entourage) {
       return NextResponse.json(
-        { error: "Supplier not found" },
+        { error: "Entourage not found" },
         { status: 404 },
       );
     }
 
-    return NextResponse.json(supplier, { status: 200 });
+    return NextResponse.json(entourage, { status: 200 });
   } catch (error) {
-    console.error("GET /suppliers/[id] error:", error);
+    console.error("GET /entourage/[id] error:", error);
     return NextResponse.json(
       { error: (error as Error).message },
       { status: 500 },
@@ -56,7 +56,7 @@ export async function PATCH(
 
     if (!id) {
       return NextResponse.json(
-        { error: "Supplier ID is required" },
+        { error: "Entourage ID is required" },
         { status: 400 },
       );
     }
@@ -64,20 +64,20 @@ export async function PATCH(
     const body = await req.json();
 
     // Update only the fields provided
-    const updatedSupplier = await Suppliers.findByIdAndUpdate(id, body, {
+    const updatedEntourage = await Entourage.findByIdAndUpdate(id, body, {
       returnDocument: "after",
     });
 
-    if (!updatedSupplier) {
+    if (!updatedEntourage) {
       return NextResponse.json(
-        { error: "Supplier not found" },
+        { error: "Entourage not found" },
         { status: 404 },
       );
     }
 
-    return NextResponse.json(updatedSupplier, { status: 200 });
+    return NextResponse.json(updatedEntourage, { status: 200 });
   } catch (error) {
-    console.error("PATCH /suppliers/[id] error:", error);
+    console.error("PATCH /entourage/[id] error:", error);
     return NextResponse.json(
       { error: (error as Error).message },
       { status: 500 },
@@ -101,26 +101,26 @@ export async function DELETE(
 
     if (!id) {
       return NextResponse.json(
-        { error: "Supplier ID is required" },
+        { error: "Entourage ID is required" },
         { status: 400 },
       );
     }
 
-    const deletedSupplier = await Suppliers.findByIdAndDelete(id);
+    const deletedEntourage = await Entourage.findByIdAndDelete(id);
 
-    if (!deletedSupplier) {
+    if (!deletedEntourage) {
       return NextResponse.json(
-        { error: "Supplier not found" },
+        { error: "Entourage not found" },
         { status: 404 },
       );
     }
 
     return NextResponse.json(
-      { message: "Supplier deleted successfully" },
+      { message: "Entourage deleted successfully" },
       { status: 200 },
     );
   } catch (error) {
-    console.error("DELETE /suppliers/[id] error:", error);
+    console.error("DELETE /entourage/[id] error:", error);
     return NextResponse.json(
       { error: (error as Error).message },
       { status: 500 },
